@@ -1,4 +1,11 @@
-import glob, re, argparse, os, re, zipfile, sys, pandas as pd, requests, time
+import glob
+import re
+import argparse
+import os
+import zipfile
+import sys
+#import pandas as pd
+#import requests
 from pydub import AudioSegment
 
 parser = argparse.ArgumentParser()
@@ -10,10 +17,12 @@ parser.add_argument('directories', nargs = '?', default = os.path.dirname(os.pat
 #	help = 'Optional argument to avoid converting and just delete the experiencer/garden-path files.')
 parser.add_argument('--dont_delete', '-dd', default = False, action = 'store_true',
 	help = 'Optional argument to save all files.')
-parser.add_argument('--auto_transcribe', '-at', default = False, action = 'store_true',
-	help = 'Optional argument to auto_transcribe the files we\'re converting.')
-parser.add_argument('--groups_list', '-g', default = '',
-	help = 'Optional argument containing a list of groups to pass to auto_transcribe (if you are not getting them automatically from the zip files).')
+parser.add_argument('--convert_only', '-co', default = False, action = 'store_true',
+	help = 'Optional argument to convert to mp3 only (and not trim).')
+#parser.add_argument('--auto_transcribe', '-at', default = False, action = 'store_true',
+#	help = 'Optional argument to auto_transcribe the files we\'re converting.')
+#parser.add_argument('--groups_list', '-g', default = '',
+#	help = 'Optional argument containing a list of groups to pass to auto_transcribe (if you are not getting them automatically from the zip files).')
 
 args = parser.parse_args()
 
@@ -36,50 +45,49 @@ if zipfiles:
 		if not args.dont_delete:
 			os.remove(file)
 
-	if args.auto_transcribe:
-		subject_ids = [os.path.split(file)[1] for file in zipfiles]
+	#if args.auto_transcribe:
+	#	subject_ids = [os.path.split(file)[1] for file in zipfiles]
 
-		try:
-			# Get the newest results file
-			print('Downloading the latest results file...')
-			s = requests.Session()
-			pcibex_url = 'https://expt.pcibex.net'
-			s.get(f'{pcibex_url}/login')
-			with open('pw.txt', 'r') as f:
-				params = f.readlines()
+	#	try:
+	#		# Get the newest results file
+	#		print('Downloading the latest results file...')
+	#		s = requests.Session()
+	#		pcibex_url = 'https://expt.pcibex.net'
+	#		s.get(f'{pcibex_url}/login')
+	#		with open('pw.txt', 'r') as f:
+	#			params = f.readlines()
 
-			s.post(f'{pcibex_url}/login', data = {'username' : params[0][:-1], 'password' : params[1][:-1]})
-			results = s.get(f'{pcibex_url}/ajax/download/{params[3]}/results/results')
+	#		s.post(f'{pcibex_url}/login', data = {'username' : params[0][:-1], 'password' : params[1][:-1]})
+	#		results = s.get(f'{pcibex_url}/ajax/download/{params[3]}/results/results')
 
-			with open('results.txt', 'wb') as file:
-				file.write(results.content)
-		except:
-			print('Unable to download latest results file. Groups will not be automatically determined if there are subjects not in the local version of the results file.')
+	#		with open('results.txt', 'wb') as file:
+	#			file.write(results.content)
+	#	except:
+	#		print('Unable to download latest results file. Groups will not be automatically determined if there are subjects not in the local version of the results file.')
 
 		# Load the results file
-		try:
-			results = pd.read_csv('results.txt', comment = '#',
-				names = ['time_rec', 'IP', 'controller', 'item_id', 'element', 'type', 'sub_experiment', 
-						 'element_type', 'element_name', 'parameter', 'value', 'event_time', 'category', 
-						 'group', 'item', 'sentence_type', 'relatedness', 'sentence', 'martrix_verb', 
-						 'prob1', 'prob2', 'prob3', 'prob4', 'wait1', 'wait2', 'wait3', 'wait4', 'comments'])
+	#	try:
+	#		results = pd.read_csv('results.txt', comment = '#',
+	#			names = ['time_rec', 'IP', 'controller', 'item_id', 'element', 'type', 'sub_experiment', 
+	#					 'element_type', 'element_name', 'parameter', 'value', 'event_time', 'category', 
+	#					 'group', 'item', 'sentence_type', 'relatedness', 'sentence', 'martrix_verb', 
+	#					 'prob1', 'prob2', 'prob3', 'prob4', 'wait1', 'wait2', 'wait3', 'wait4', 'comments'])
 			
 			# We have to use a for loop in case the results are not in the order of the subject identifiers
-			subject_ips = []
-			for subject_id in subject_ids:
-				subject_ips.append(results.loc[results.value == subject_id].IP.tolist()[0])
+	#		subject_ips = []
+	#		for subject_id in subject_ids:
+	#			subject_ips.append(results.loc[results.value == subject_id].IP.tolist()[0])
 			
-			if len(subject_ids) == len(subject_ips):
-				exp_groups = [results.loc[results.IP == subject_ip].loc[results.category == 'Experiencer'].iloc[1,:].group for subject_ip in subject_ips]
-				gp_groups = [results.loc[results.IP == subject_ip].loc[results.category == 'Garden-Path'].iloc[1,:].group for subject_ip in subject_ips]
-				cr_groups = [results.loc[results.IP == subject_ip].loc[results.category == 'ControlRaising'].iloc[1,:].group for subject_ip in subject_ips]
-				args.groups_list = ':'.join([','.join([exp, gp, cr]) for (exp, gp, cr) in list(zip(exp_groups, gp_groups, cr_groups))])
-			else:
-				print('Warning: number of zipfiles and subjects do not match. Groups will not be determined.')
-				args.groups_list = ''
-		except:
-			print('Unable to load latest results file. Groups will not be determined.')
-			args.groups_list = ''
+	#		if len(subject_ids) == len(subject_ips):
+	#			exp_groups = [results.loc[results.IP == subject_ip].loc[results.category == 'Experiencer'].iloc[1,:].group for subject_ip in subject_ips]
+	#			gp_groups = [results.loc[results.IP == subject_ip].loc[results.category == 'Garden-Path'].iloc[1,:].group for subject_ip in subject_ips]
+	#			args.groups_list = ':'.join([','.join([exp, gp]) for (exp, gp) in list(zip(exp_groups, gp_groups))])
+	#		else:
+	#			print('Warning: number of zipfiles and subjects do not match. Groups will not be determined.')
+	#			args.groups_list = ''
+	#	except:
+	#		print('Unable to load latest results file. Groups will not be determined.')
+	#		args.groups_list = ''
 		
 files = [item for sublist in [[f'{directory}/{file}' for file in os.listdir(directory) if file.endswith('.webm')] for directory in args.directories] for item in sublist]
 
@@ -129,28 +137,34 @@ for f in files:
 	# Read in the sound file
 	sound = AudioSegment.from_file(f)
 
-	# Find the stimulus number
-	num = int(re.search(r'^[1-9][0-9]?', os.path.split(f)[1]).group())
+	# Trim if we're doing that
+	if not args.convert_only:
 
-	# Only trim if the sound is long enough
-	if len(sound) > 10000:
+		# Find the stimulus number
+		num = int(re.search(r'^[1-9][0-9]?', os.path.split(f)[1]).group())
+		
+		# Only trim if the sound is long enough
+		if len(sound) > 10000:
 
-		# If item number is 1, 4, 7, etc. then there are two math problems (+2 ms buffer)
-		if num % 3 == 1:
-			sound = sound[4100:]
+			# If item number is 1, 4, 7, etc. then there are two nonce words (+100 ms buffer)
+			if num % 3 == 1:
+				sound = sound[4100:]
 
-		# If item number is 2, 5, 8, etc. then there are three math problems (+1 ms buffer)
-		if num % 3 == 2:
-			sound = sound[6050:]
+			# If item number is 2, 5, 8, etc. then there are three nonce words (+50 ms buffer)
+			if num % 3 == 2:
+				sound = sound[6050:]
 
-		# If item number is 3, 6, 9, etc. then there are four math problems (no buffer)
-		if num % 3 == 0:
-			sound = sound[8000:]
+			# If item number is 3, 6, 9, etc. then there are four nonce words (no buffer)
+			if num % 3 == 0:
+				sound = sound[8000:]
 
-		directory = f'{os.path.split(f)[0]}/'
+			directory = f'{os.path.split(f)[0]}/'
 
-	# Export the trimmed sound
-	sound.export(directory + str(num) + "_trimmed.mp3", format = 'mp3')
+		# Export the trimmed sound
+		sound.export(directory + str(num) + "_trimmed.mp3", format = 'mp3')
+	# Otherwise, just convert the audio
+	else:
+		sound.export(directory + '/' + os.path.splitext(os.path.basename(f))[0] + '.mp3', format = 'mp3')
 
 	if not args.dont_delete:
 		success = False
@@ -162,5 +176,5 @@ for f in files:
 				pass
 
 # Call the auto_trancribe script if we want that
-if args.auto_transcribe:
-	os.system(f'python auto_transcribe.py {auto_transcribe_directories} {args.groups_list}')
+#if args.auto_transcribe:
+#	os.system(f'python auto_transcribe.py {auto_transcribe_directories} {args.groups_list}')
