@@ -40,8 +40,8 @@ sound_dirs: optional. The (relative) path to the directory/directories containin
 
 If running on Windows, `align.py` will work best if run from an administrator command prompt. If you are not running from an administrator command prompt, there will be minor inconveniences:
 
-	1. The `com.docker.service` process must be running before you run `align.py`.
-	2. You must exit Docker Desktop manually after the `align.py` finishes.
+1. The `com.docker.service` process must be running before you run `align.py`.
+2. You must exit Docker Desktop manually after the `align.py` finishes.
 
 If you are running `align.py` from an administrator command prompt, these will be handled automatically. If you are not running from an administrator command prompt, you will be prompted for admin privileges.
 
