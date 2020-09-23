@@ -1,0 +1,166 @@
+import glob, re, argparse, os, re, zipfile, sys, pandas as pd, requests, time
+from pydub import AudioSegment
+
+parser = argparse.ArgumentParser()
+parser.add_argument('directories', nargs = '?', default = os.path.dirname(os.path.realpath(__file__)),
+	help = 'Optional argument to specify the directory containing the webm files.')
+#parser.add_argument('--experiencer_only', '-e', default = False, action = 'store_true',
+#	help = 'Optional argument to avoid converting and just delete the control/raising files.')
+#parser.add_argument('--controlraising_only', '-cr', default = False, action = 'store_true',
+#	help = 'Optional argument to avoid converting and just delete the experiencer/garden-path files.')
+parser.add_argument('--dont_delete', '-dd', default = False, action = 'store_true',
+	help = 'Optional argument to save all files.')
+parser.add_argument('--auto_transcribe', '-at', default = False, action = 'store_true',
+	help = 'Optional argument to auto_transcribe the files we\'re converting.')
+parser.add_argument('--groups_list', '-g', default = '',
+	help = 'Optional argument containing a list of groups to pass to auto_transcribe (if you are not getting them automatically from the zip files).')
+
+args = parser.parse_args()
+
+# Figure out the sound directories
+if args.auto_transcribe:
+	auto_transcribe_directories = args.directories
+
+args.directories = args.directories.split(':')
+
+# Allow for wildcards
+args.directories = [item for sublist in [glob.glob(directory, recursive = True) for directory in args.directories] for item in sublist]
+
+# Unzip the zip files if any exist, and use their filenames to get the groups
+zipfiles = [item for sublist in [[f'{directory}/{file}' for file in os.listdir(directory) if file.endswith('.zip')] for directory in args.directories] for item in sublist]
+if zipfiles:
+	for file in zipfiles:
+		with zipfile.ZipFile(file, 'r') as f:
+			f.extractall(os.path.split(file)[0])
+
+		if not args.dont_delete:
+			os.remove(file)
+
+	if args.auto_transcribe:
+		subject_ids = [os.path.split(file)[1] for file in zipfiles]
+
+		try:
+			# Get the newest results file
+			print('Downloading the latest results file...')
+			s = requests.Session()
+			pcibex_url = 'https://expt.pcibex.net'
+			s.get(f'{pcibex_url}/login')
+			with open('pw.txt', 'r') as f:
+				params = f.readlines()
+
+			s.post(f'{pcibex_url}/login', data = {'username' : params[0][:-1], 'password' : params[1][:-1]})
+			results = s.get(f'{pcibex_url}/ajax/download/{params[3]}/results/results')
+
+			with open('results.txt', 'wb') as file:
+				file.write(results.content)
+		except:
+			print('Unable to download latest results file. Groups will not be automatically determined if there are subjects not in the local version of the results file.')
+
+		# Load the results file
+		try:
+			results = pd.read_csv('results.txt', comment = '#',
+				names = ['time_rec', 'IP', 'controller', 'item_id', 'element', 'type', 'sub_experiment', 
+						 'element_type', 'element_name', 'parameter', 'value', 'event_time', 'category', 
+						 'group', 'item', 'sentence_type', 'relatedness', 'sentence', 'martrix_verb', 
+						 'prob1', 'prob2', 'prob3', 'prob4', 'wait1', 'wait2', 'wait3', 'wait4', 'comments'])
+			
+			# We have to use a for loop in case the results are not in the order of the subject identifiers
+			subject_ips = []
+			for subject_id in subject_ids:
+				subject_ips.append(results.loc[results.value == subject_id].IP.tolist()[0])
+			
+			if len(subject_ids) == len(subject_ips):
+				exp_groups = [results.loc[results.IP == subject_ip].loc[results.category == 'Experiencer'].iloc[1,:].group for subject_ip in subject_ips]
+				gp_groups = [results.loc[results.IP == subject_ip].loc[results.category == 'Garden-Path'].iloc[1,:].group for subject_ip in subject_ips]
+				cr_groups = [results.loc[results.IP == subject_ip].loc[results.category == 'ControlRaising'].iloc[1,:].group for subject_ip in subject_ips]
+				args.groups_list = ':'.join([','.join([exp, gp, cr]) for (exp, gp, cr) in list(zip(exp_groups, gp_groups, cr_groups))])
+			else:
+				print('Warning: number of zipfiles and subjects do not match. Groups will not be determined.')
+				args.groups_list = ''
+		except:
+			print('Unable to load latest results file. Groups will not be determined.')
+			args.groups_list = ''
+		
+files = [item for sublist in [[f'{directory}/{file}' for file in os.listdir(directory) if file.endswith('.webm')] for directory in args.directories] for item in sublist]
+
+#if args.experiencer_only:
+#	unneeded = [file for file in files if re.search('([1-6][0-9]])|(7[0-4])', os.path.split(file)[1])]
+#	files = [file for file in files if not file in unneeded]
+#
+#	# Get rid of the unneeded groups so we don't create an unnecessary csv
+#	groups = [groups.split(',') for groups in args.groups_list.split(':')]
+#	args.groups_list = ':'.join([','.join(subj_groups[:-1] + ['']) if len(subj_groups) == 3 else ','.join(subj_groups) for subj_groups in groups])
+#
+#	if not args.dont_delete:
+#		for file in unneeded:
+#			success = False
+#			while not success:
+#				try:
+#					os.remove(file)
+#					success = True
+#				except:
+#					pass
+
+#if args.controlraising_only:
+#	unneeded = [file for file in files if re.search(r'(^[1-9]{1}\.)|([1-3][0-9])|(4[0-8])', os.path.split(file)[1])]
+#	files = [file for file in files if not file in unneeded]
+#
+#	# Get rid of the unneeded groups so we don't create an unneccesary csv
+#	groups = [groups.split(',') for groups in args.groups_list.split(':')]
+#	args.groups_list = ':'.join([','.join(['', '', subj_groups[-1]]) if len(subj_groups) == 3 else subj_groups for subj_groups in groups])
+#	
+#	if not args.dont_delete:
+#		for file in unneeded:
+#			success = False
+#			while not success:
+#				try:
+#					os.remove(file)
+#					success = True
+#				except:
+#					pass
+
+if not files:
+	print('No files found to convert. Exiting...')
+	sys.exit(1)
+
+for f in files:
+	print(f'\rConverting and trimming {f}...', end = '', flush = True)
+
+	# Read in the sound file
+	sound = AudioSegment.from_file(f)
+
+	# Find the stimulus number
+	num = int(re.search(r'^[1-9][0-9]?', os.path.split(f)[1]).group())
+
+	# Only trim if the sound is long enough
+	if len(sound) > 10000:
+
+		# If item number is 1, 4, 7, etc. then there are two math problems (+2 ms buffer)
+		if num % 3 == 1:
+			sound = sound[4100:]
+
+		# If item number is 2, 5, 8, etc. then there are three math problems (+1 ms buffer)
+		if num % 3 == 2:
+			sound = sound[6050:]
+
+		# If item number is 3, 6, 9, etc. then there are four math problems (no buffer)
+		if num % 3 == 0:
+			sound = sound[8000:]
+
+		directory = f'{os.path.split(f)[0]}/'
+
+	# Export the trimmed sound
+	sound.export(directory + str(num) + "_trimmed.mp3", format = 'mp3')
+
+	if not args.dont_delete:
+		success = False
+		while not success:
+			try:
+				os.remove(f)
+				success = True
+			except:
+				pass
+
+# Call the auto_trancribe script if we want that
+if args.auto_transcribe:
+	os.system(f'python auto_transcribe.py {auto_transcribe_directories} {args.groups_list}')
