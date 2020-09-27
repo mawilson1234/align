@@ -5,7 +5,7 @@ import os
 import zipfile
 import sys
 import pandas as pd
-#import requests
+import requests
 from pydub import AudioSegment
 
 parser = argparse.ArgumentParser()
@@ -55,12 +55,12 @@ if zipfiles:
 		print('Downloading the latest results file...')
 		s = requests.Session()
 		pcibex_url = 'https://expt.pcibex.net'
-		s.get(f'{pcibex_url}/login')
 		with open('pw.txt', 'r') as f:
 			params = f.readlines()
 
+		s.get(f'{pcibex_url}/login')
 		s.post(f'{pcibex_url}/login', data = {'username' : params[0][:-1], 'password' : params[1][:-1]})
-		results = s.get(f'{pcibex_url}/ajax/download/{params[3]}/results/results')
+		results = s.get(f'{pcibex_url}/ajax/download/{params[2]}/results/results')
 
 		with open('results.txt', 'wb') as file:
 			file.write(results.content)
