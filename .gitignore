@@ -1,3 +1,7 @@
 *.txt
 auto_transcribe.py
 *.xlsx
+*.r
+Audio/
+Plots/
+Models/
