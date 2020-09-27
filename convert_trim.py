@@ -42,6 +42,7 @@ zipfiles = [item for sublist in [[f'{directory}/{file}' for file in os.listdir(d
 if zipfiles:
 	for file in zipfiles:
 		with zipfile.ZipFile(file, 'r') as f:
+			print(f'\rExtracting {file}...', end = '', flush = True)
 			f.extractall(os.path.split(file)[0])
 
 		if not args.dont_delete:
