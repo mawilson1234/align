@@ -35,7 +35,7 @@ args = parser.parse_args()
 args.directories = args.directories.split(':')
 
 # Allow for wildcards
-args.directories = [item for sublist in [glob.glob(directory, recursive = True) for directory in args.directories] for item in sublist]
+args.directories = [item for sublist in [glob.glob(directory) for directory in args.directories] for item in sublist]
 
 # Unzip the zip files if any exist, and use their filenames to get the groups
 zipfiles = [item for sublist in [[f'{directory}/{file}' for file in os.listdir(directory) if file.endswith('.zip')] for directory in args.directories] for item in sublist]
