@@ -50,22 +50,22 @@ if zipfiles:
 	#if args.auto_transcribe:
 	subject_ids = [os.path.split(file)[1] for file in zipfiles]
 
-	#	try:
-	#		# Get the newest results file
-	#		print('Downloading the latest results file...')
-	#		s = requests.Session()
-	#		pcibex_url = 'https://expt.pcibex.net'
-	#		s.get(f'{pcibex_url}/login')
-	#		with open('pw.txt', 'r') as f:
-	#			params = f.readlines()
+	try:
+		# Get the newest results file
+		print('Downloading the latest results file...')
+		s = requests.Session()
+		pcibex_url = 'https://expt.pcibex.net'
+		s.get(f'{pcibex_url}/login')
+		with open('pw.txt', 'r') as f:
+			params = f.readlines()
 
-	#		s.post(f'{pcibex_url}/login', data = {'username' : params[0][:-1], 'password' : params[1][:-1]})
-	#		results = s.get(f'{pcibex_url}/ajax/download/{params[3]}/results/results')
+		s.post(f'{pcibex_url}/login', data = {'username' : params[0][:-1], 'password' : params[1][:-1]})
+		results = s.get(f'{pcibex_url}/ajax/download/{params[3]}/results/results')
 
-	#		with open('results.txt', 'wb') as file:
-	#			file.write(results.content)
-	#	except:
-	#		print('Unable to download latest results file. Groups will not be automatically determined if there are subjects not in the local version of the results file.')
+		with open('results.txt', 'wb') as file:
+			file.write(results.content)
+	except:
+		print('Unable to download latest results file. Groups will not be automatically determined if there are subjects not in the local version of the results file.')
 
 	if not args.no_groups:
 		# Load the results file
