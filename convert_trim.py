@@ -207,7 +207,8 @@ if not args.no_groups:
 		gp_group = groups.split(',')[1]
 
 		exp_template = pd.read_excel('groups_exp.xlsx', sheet_name = f'Group {exp_group}')
-		exp_template.to_csv(f'{directory}/Experiencer/{directory.split("/")[-1]}_exp.csv', index = False)
+		breakpoint()
+		exp_template.to_csv(f'{directory}/Experiencer/{os.path.split(directory)[-1]}_exp.csv', index = False)
 
 		gp_template = pd.read_excel('groups_garden-path.xlsx', sheet_name = f'Group {gp_group}')
-		gp_template.to_csv(f'{directory}/Garden-Path/{directory.split("/")[-1]}_gp.csv', index = False)
+		gp_template.to_csv(f'{directory}/Garden-Path/{os.path.split(directory)[-1]}_gp.csv', index = False)
