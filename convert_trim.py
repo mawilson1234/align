@@ -60,7 +60,7 @@ if zipfiles:
 	#			params = f.readlines()
 
 	#		s.post(f'{pcibex_url}/login', data = {'username' : params[0][:-1], 'password' : params[1][:-1]})
-	#		results = s.get(f'{pcibex_url}/ajax/download/{params[3]}/results/results')
+	#		results = s.get(f'{pcibex_url}/ajax/download/{params[2]}/results/results')
 
 	#		with open('results.txt', 'wb') as file:
 	#			file.write(results.content)
