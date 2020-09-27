@@ -4,7 +4,7 @@ import argparse
 import os
 import zipfile
 import sys
-#import pandas as pd
+import pandas as pd
 #import requests
 from pydub import AudioSegment
 
@@ -19,16 +19,18 @@ parser.add_argument('--dont_delete', '-dd', default = False, action = 'store_tru
 	help = 'Optional argument to save all files.')
 parser.add_argument('--convert_only', '-co', default = False, action = 'store_true',
 	help = 'Optional argument to convert to mp3 only (and not trim).')
+parser.add_argument('--no_groups', '-ng', default = False, action = 'store_true',
+	help = 'Optional argument to not automatically get groups. Getting groups has only been tested for experiencer and garden-path items.')
 #parser.add_argument('--auto_transcribe', '-at', default = False, action = 'store_true',
 #	help = 'Optional argument to auto_transcribe the files we\'re converting.')
 #parser.add_argument('--groups_list', '-g', default = '',
-#	help = 'Optional argument containing a list of groups to pass to auto_transcribe (if you are not getting them automatically from the zip files).')
+#	help = 'Optional argument containing a list of groups to use to generate transcription templates (if you are not getting them automatically from the zip files).')
 
 args = parser.parse_args()
 
 # Figure out the sound directories
-if args.auto_transcribe:
-	auto_transcribe_directories = args.directories
+#if args.auto_transcribe:
+#	auto_transcribe_directories = args.directories
 
 args.directories = args.directories.split(':')
 
@@ -46,7 +48,7 @@ if zipfiles:
 			os.remove(file)
 
 	#if args.auto_transcribe:
-	#	subject_ids = [os.path.split(file)[1] for file in zipfiles]
+	subject_ids = [os.path.split(file)[1] for file in zipfiles]
 
 	#	try:
 	#		# Get the newest results file
@@ -65,29 +67,30 @@ if zipfiles:
 	#	except:
 	#		print('Unable to download latest results file. Groups will not be automatically determined if there are subjects not in the local version of the results file.')
 
+	if not args.no_groups:
 		# Load the results file
-	#	try:
-	#		results = pd.read_csv('results.txt', comment = '#',
-	#			names = ['time_rec', 'IP', 'controller', 'item_id', 'element', 'type', 'sub_experiment', 
-	#					 'element_type', 'element_name', 'parameter', 'value', 'event_time', 'category', 
-	#					 'group', 'item', 'sentence_type', 'relatedness', 'sentence', 'martrix_verb', 
-	#					 'prob1', 'prob2', 'prob3', 'prob4', 'wait1', 'wait2', 'wait3', 'wait4', 'comments'])
-			
+		try:
+			results = pd.read_csv('results.txt', comment = '#',
+				names = ['time_rec', 'IP', 'controller', 'item_id', 'element', 'type', 'sub_experiment', 
+						 'element_type', 'element_name', 'parameter', 'value', 'event_time', 'category', 
+						 'group', 'item', 'sentence_type', 'relatedness', 'sentence', 'martrix_verb', 
+						 'prob1', 'prob2', 'prob3', 'prob4', 'wait1', 'wait2', 'wait3', 'wait4', 'comments'])
+				
 			# We have to use a for loop in case the results are not in the order of the subject identifiers
-	#		subject_ips = []
-	#		for subject_id in subject_ids:
-	#			subject_ips.append(results.loc[results.value == subject_id].IP.tolist()[0])
-			
-	#		if len(subject_ids) == len(subject_ips):
-	#			exp_groups = [results.loc[results.IP == subject_ip].loc[results.category == 'Experiencer'].iloc[1,:].group for subject_ip in subject_ips]
-	#			gp_groups = [results.loc[results.IP == subject_ip].loc[results.category == 'Garden-Path'].iloc[1,:].group for subject_ip in subject_ips]
-	#			args.groups_list = ':'.join([','.join([exp, gp]) for (exp, gp) in list(zip(exp_groups, gp_groups))])
-	#		else:
-	#			print('Warning: number of zipfiles and subjects do not match. Groups will not be determined.')
-	#			args.groups_list = ''
-	#	except:
-	#		print('Unable to load latest results file. Groups will not be determined.')
-	#		args.groups_list = ''
+			subject_ips = []
+			for subject_id in subject_ids:
+				subject_ips.append(results.loc[results.value == subject_id].IP.tolist()[0])
+				
+			if len(subject_ids) == len(subject_ips):
+				exp_groups = [results.loc[results.IP == subject_ip].loc[results.category == 'Experiencer'].iloc[1,:].group for subject_ip in subject_ips]
+				gp_groups = [results.loc[results.IP == subject_ip].loc[results.category == 'Garden-Path'].iloc[1,:].group for subject_ip in subject_ips]
+				args.groups_list = ':'.join([','.join([exp, gp]) for (exp, gp) in list(zip(exp_groups, gp_groups))])
+			else:
+				print('Warning: number of zipfiles and subjects do not match. Groups will not be determined.')
+				args.groups_list = ''
+		except:
+			print('Unable to load latest results file. Groups will not be determined.')
+			args.groups_list = ''
 		
 files = [item for sublist in [[f'{directory}/{file}' for file in os.listdir(directory) if file.endswith('.webm')] for directory in args.directories] for item in sublist]
 
@@ -178,3 +181,33 @@ for f in files:
 # Call the auto_trancribe script if we want that
 #if args.auto_transcribe:
 #	os.system(f'python auto_transcribe.py {auto_transcribe_directories} {args.groups_list}')
+
+# If we are getting groups, places files into the appropriate directories and add transcription templates
+if not args.no_groups:
+	# Get the groups for each subject
+	groups_list = args.groups_list.split(':')
+
+	# Iterate through the groups and directories for each subject
+	for groups, directory in tuple(zip(groups_list, args.directories)):
+
+		# Get the mp3 files
+		files = [f for f in os.listdir(directory) if f.endswith('.mp3')]
+
+		# Create directories and move files to the corresponding directories
+		if not os.path.isdir(f'{directory}/Experiencer'): os.makedirs(f'{directory}/Experiencer')
+		if not os.path.isdir(f'{directory}/Garden-Path'): os.makedirs(f'{directory}/Garden-Path')
+		for mp3 in files:
+			if re.findall(r'^([1-9]\_|[1-2][0-9]\_|3[0-2]\_)', mp3):
+				os.rename(f'{directory}/{mp3}', f'{directory}/Experiencer/{mp3}')
+			elif re.findall(r'^(3[3-9]\_|[4-5][0-9]\_|6[0-4]\_)', mp3):
+				os.rename(f'{directory}/{mp3}', f'{directory}/Garden-Path/{mp3}')
+
+		# Save CSV files with the transcription templates for each group
+		exp_group = groups.split(',')[0]
+		gp_group = groups.split(',')[1]
+
+		exp_template = pd.read_excel('groups_exp.xlsx', sheet_name = f'Group {exp_group}')
+		exp_template.to_csv(f'{directory}/Experiencer/{directory.split("/")[-1]}_exp.csv', index = False)
+
+		gp_template = pd.read_excel('groups_garden-path.xlsx', sheet_name = f'Group {gp_group}')
+		gp_template.to_csv(f'{directory}/Garden-Path/{directory.split("/")[-1]}_gp.csv', index = False)
