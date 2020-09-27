@@ -208,8 +208,11 @@ if not args.no_groups:
 		gp_group = groups.split(',')[1]
 
 		exp_template = pd.read_excel('groups_exp.xlsx', sheet_name = f'Group {exp_group}')
-		breakpoint()
+		exp_template['Subject'] = re.sub('S', '', os.path.split(directory)[-1])
+		exp_template = exp_template.reindex(columns = (['Group', 'Subject'] + list([a for a in exp_template.columns if not a in ['Group', 'Subject']])))
 		exp_template.to_csv(f'{directory}/Experiencer/{os.path.split(directory)[-1]}_exp.csv', index = False)
 
 		gp_template = pd.read_excel('groups_garden-path.xlsx', sheet_name = f'Group {gp_group}')
+		gp_template['Subject'] = re.sub('S', '', os.path.split(directory)[-1])
+		gp_template = gp_template.reindex(columns = (['Group', 'Subject'] + list([a for a in gp_template.columns if not a in ['Group', 'Subject']])))
 		gp_template.to_csv(f'{directory}/Garden-Path/{os.path.split(directory)[-1]}_gp.csv', index = False)
