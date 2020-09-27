@@ -42,6 +42,7 @@ zipfiles = [item for sublist in [[f'{directory}/{file}' for file in os.listdir(d
 if zipfiles:
 	for file in zipfiles:
 		with zipfile.ZipFile(file, 'r') as f:
+			print(f'\rExtracting {file}...', end = '', flush = True)
 			f.extractall(os.path.split(file)[0])
 
 		if not args.dont_delete:
@@ -207,7 +208,7 @@ if not args.no_groups:
 		gp_group = groups.split(',')[1]
 
 		exp_template = pd.read_excel('groups_exp.xlsx', sheet_name = f'Group {exp_group}')
-		exp_template.to_csv(f'{directory}/Experiencer/{directory.split("/")[-1]}_exp.csv', index = False)
+		exp_template.to_csv(f'{directory}/Experiencer/{os.path.split(directory)[-1]}_exp.csv', index = False)
 
 		gp_template = pd.read_excel('groups_garden-path.xlsx', sheet_name = f'Group {gp_group}')
-		gp_template.to_csv(f'{directory}/Garden-Path/{directory.split("/")[-1]}_gp.csv', index = False)
+		gp_template.to_csv(f'{directory}/Garden-Path/{os.path.split(directory)[-1]}_gp.csv', index = False)
