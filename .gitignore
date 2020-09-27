@@ -1,6 +1,6 @@
 *.txt
 auto_transcribe.py
-*.xlsx
+SUBTLEX\ sentences.xlsx
 *.r
 Audio/
 Plots/
