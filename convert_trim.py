@@ -48,6 +48,8 @@ if zipfiles:
 		if not args.dont_delete:
 			os.remove(file)
 
+	print('\n', end = '')
+
 	#if args.auto_transcribe:
 	subject_ids = [os.path.split(file)[1] for file in zipfiles]
 
