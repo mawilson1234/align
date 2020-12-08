@@ -151,17 +151,28 @@ for f in files:
 		# Only trim if the sound is long enough
 		if len(sound) > 10000:
 
-			# If item number is 1, 4, 7, etc. then there are two nonce words (+100 ms buffer)
-			if num % 3 == 1:
-				sound = sound[4100:]
+			# Experiencer items
+			if num < 33:
+				# If item number is 1, 4, 7, etc. then there are two nonce words (+100 ms buffer)
+				if num % 3 == 1:
+					sound = sound[4100:]
 
-			# If item number is 2, 5, 8, etc. then there are three nonce words (+50 ms buffer)
-			if num % 3 == 2:
-				sound = sound[6050:]
+				# If item number is 2, 5, 8, etc. then there are three nonce words (+50 ms buffer)
+				if num % 3 == 2:
+					sound = sound[6050:]
 
-			# If item number is 3, 6, 9, etc. then there are four nonce words (no buffer)
-			if num % 3 == 0:
-				sound = sound[8000:]
+				# If item number is 3, 6, 9, etc. then there are four nonce words (no buffer)
+				if num % 3 == 0:
+					sound = sound[8000:]
+			else:
+				if num % 3 == 0:
+					sound = sound[4100:]
+
+				if num % 3 == 1:
+					sound = sound[6050:]
+
+				if num % 3 == 2:
+					sound = sound[8000:]
 
 			directory = f'{os.path.split(f)[0]}/'
 

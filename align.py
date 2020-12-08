@@ -1,6 +1,6 @@
 # align.py by Michael Wilson
 # Based on transcription_extraction.py, gentle_align.sh, and gentle2r.py by Shota Momma
-# Last update 07/16/2020
+# Last update 12/08/2020
 import requests, argparse, os, re, subprocess, json, pandas, time, sys, shutil, ctypes, glob
 
 # Define a function to determine if the current user is an admin on Windows (this is necessary on Windows to start the docker service and close out the docker VM correctly)
@@ -165,6 +165,8 @@ if os.name == 'nt':
 	else:
 		print('Warning: cannot start docker service without admin privileges. You may run into issues if the service is not already running, or see an admin prompt to start it.')
 		if (cont := input('Would you like to open an administrator command prompt and continue? (y/n): ')).lower() == 'y':
+			# This addresses an issue when not running using the "python" command but just calling the script
+			sys.argv[0] = os.path.split(sys.argv[0])[1]
 			ctypes.windll.shell32.ShellExecuteW(None, 'runas', sys.executable, ' '.join(sys.argv), None, 1)
 			sys.exit(0)
 		else:
@@ -301,7 +303,9 @@ for transcription_file, sound_dir, stimuli_file in tf_sd_sf:
 	grids = [align_dir + '/' + grid for grid in grids]
 
 	# Set up a dataframe to hold the timing info
-	durations = pandas.DataFrame(columns = [args.item] + ['R' + num for num in list(map(str, list(range(0, args.max_words))))])
+	durations = pandas.DataFrame(columns = [args.item] + 
+		['R' + num for num in list(map(str, list(range(0, args.max_words))))] + 
+		['W' + num for num in list(map(str, list(range(0, args.max_words))))])
 
 	# For each alignment file
 	for grid in grids:
@@ -309,8 +313,11 @@ for transcription_file, sound_dir, stimuli_file in tf_sd_sf:
 		# Get the item number from the json file name
 		item_number = os.path.split(grid)[-1][:-5]
 
-		# Set up a row for that file in the data frame
-		row = [item_number]
+		# Set up a row for the durations for that file in the data frame
+		dur_row = [item_number]
+
+		# Set up a row for the words for that file in the data frame
+		word_row = []
 
 		# Define a corresponding textgrid_file and open it + write the preamble
 		textgrid_file = sound_dir + '/' + item_number + '_praat.TextGrid'
@@ -349,7 +356,10 @@ for transcription_file, sound_dir, stimuli_file in tf_sd_sf:
 					diff = round(float(onset), 4) * 1000
 
 					# Add it to the row
-					row.append(diff)
+					dur_row.append(diff)
+
+					# Add a pre-speech marker to the words (Speech Onset Latency)
+					word_row.append('SOL')
 
 				# Get the duration of the word
 				# Starting point of the word
@@ -364,16 +374,28 @@ for transcription_file, sound_dir, stimuli_file in tf_sd_sf:
 				
 				# Duration is the difference between ending and starting time
 				diff = post - pre
-				row.append(diff)
+				dur_row.append(diff)
+
+				# Add the word with that duration to the word row
+				word_row.append(word)
 
 				# Write its onset, offset, and text to the TextGrid
 				f.write('\n' + str(onset))
 				f.write('\n' + str(offset))
 				f.write('\n"' + word + '"')
 
-		# Fill out the row with zeros (have to add one because of the item number column)
-		while len(row) < args.max_words + 1:
-			row.append(0)
+		# Fill out the durations row with zeros (have to add one because of the item number column)
+		while len(dur_row) < args.max_words + 1:
+			dur_row.append(0)
+
+		# Fill out the words row with dashes (don't add one becaus there's no item number column)
+		while len(word_row) < args.max_words:
+			word_row.append('-')
+
+		# Add the words to the end of the durations
+		row = dur_row + word_row
+
+		breakpoint()
 
 		# Add the row to the data frame
 		row = pandas.Series(row, index = durations.columns)
@@ -400,6 +422,6 @@ for transcription_file, sound_dir, stimuli_file in tf_sd_sf:
 			counter += 1
 			all_csv = sound_dir + '/all' + str(counter) + '.csv'
 
-		durations.to_csv(sound_dir + '/all.csv')
+		durations.to_csv(all_csv, index = False)
 
 close_gentle()
