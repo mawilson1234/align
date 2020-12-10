@@ -20,6 +20,19 @@ def sort_human(l):
 def sort_flatten(l):
 	return sort_human([item for sublist in l for item in sublist])
 
+# Define a function to read in a csv in either the default encoding or latin1
+def my_read_csv(csv):
+	try:
+		data = pandas.read_csv(csv)
+	except:
+		try: 
+			data = pandas.read_csv(csv, encoding = 'latin1')
+		except:
+			print('Error: unable to read "' + csv + '". Exiting.')
+			sys.exit(1)
+
+	return data
+
 # Function to close gentle/docker depending on os
 def close_gentle():
 	if os.name == 'nt':
@@ -209,7 +222,7 @@ for transcription_file, sound_dir, stimuli_file in tf_sd_sf:
 
 	# Read in the transcription data and sort by item number
 	try:
-		transcription_data = pandas.read_csv(transcription_file)
+		transcription_data = my_read_csv(transcription_file)
 	except:
 		print('Unable to find or read file containing transcriptions. Halting execution.')
 		close_gentle()
@@ -404,7 +417,7 @@ for transcription_file, sound_dir, stimuli_file in tf_sd_sf:
 	# Combine durations with a stimulus file that has matching item numbers
 	print('Writing out durations for ' + transcription_file + '...')
 	try:
-		stimuli = pandas.read_csv(stimuli_file)
+		stimuli = my_read_csv(stimuli_file)
 		stimuli = stimuli.drop(list(stimuli.filter(regex = 'R[0-9]*').columns), axis = 1)
 		stimuli[args.item] = pandas.to_numeric(stimuli[args.item])
 		durations[args.item] = pandas.to_numeric(durations[args.item])
