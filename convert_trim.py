@@ -40,16 +40,6 @@ args.directories = [item for sublist in [glob.glob(directory) for directory in a
 # Unzip the zip files if any exist, and use their filenames to get the groups
 zipfiles = [item for sublist in [[f'{directory}/{file}' for file in os.listdir(directory) if file.endswith('.zip')] for directory in args.directories] for item in sublist]
 if zipfiles:
-	for file in zipfiles:
-		with zipfile.ZipFile(file, 'r') as f:
-			print(f'\rExtracting {file}...', end = '', flush = True)
-			f.extractall(os.path.split(file)[0])
-
-		if not args.dont_delete:
-			os.remove(file)
-
-	print('\n', end = '')
-	#if args.auto_transcribe:
 	subject_ids = [os.path.split(file)[1] for file in zipfiles]
 
 	try:
@@ -66,8 +56,47 @@ if zipfiles:
 
 		with open('results.txt', 'wb') as file:
 			file.write(results.content)
+
+		results = pd.read_csv('results.txt', comment = '#',
+			names = ['time_rec', 'IP', 'controller', 'item_id', 'element', 'type', 'sub_experiment', 
+					 'element_type', 'element_name', 'parameter', 'value', 'event_time', 'category', 
+					 'group', 'item', 'sentence_type', 'relatedness', 'sentence', 'martrix_verb', 
+					 'prob1', 'prob2', 'prob3', 'prob4', 'wait1', 'wait2', 'wait3', 'wait4', 'comments'])
+
+		subjects = pd.DataFrame({'time_rec': results.time_rec.drop_duplicates().reset_index(drop = True)})
+		subjects['number'] = subjects.index + 1
+
+		results = results.merge(subjects)
+
+		# We have to use a for loop in case the results are not in the order of the subject identifiers
+		subject_numbers = []
+		for subject_id in subject_ids:
+			subject_numbers.append(results.loc[results.value == subject_id].number.tolist()[0])
+
+		for file, subject in tuple(zip(zipfiles, subject_numbers)):
+			with zipfile.ZipFile(file, 'r') as f:
+				print(f'\rExtracting {file}...', end = '', flush = True)
+				os.mkdir(os.path.split(file)[0] + '/S' + str(subject).zfill(2))
+				args.directories.append(os.path.split(file)[0] + '/S' + str(subject).zfill(2))
+				f.extractall(os.path.split(file)[0] + '/S' + str(subject).zfill(2))
+
+			if not args.dont_delete:
+				os.remove(file)
 	except:
 		print('Unable to download latest results file. Groups will not be automatically determined if there are subjects not in the local version of the results file.')
+
+		# Extract each file to its own directory
+		for file in zipfiles:
+			with zipfile.ZipFile(file, 'r') as f:
+				print(f'\rExtracting {file}...', end = '', flush = True)
+				os.mkdir(file[:-4])
+				args.directories.append(file[:-4])
+				f.extractall(file[:-4])
+
+			if not args.dont_delete:
+				os.remove(file)
+
+	print('\n', end = '')
 
 	if not args.no_groups:
 		# Load the results file
@@ -95,6 +124,7 @@ if zipfiles:
 			args.groups_list = ''
 		
 files = [item for sublist in [[f'{directory}/{file}' for file in os.listdir(directory) if file.endswith('.webm')] for directory in args.directories] for item in sublist]
+files.sort()
 
 #if args.experiencer_only:
 #	unneeded = [file for file in files if re.search('([1-6][0-9]])|(7[0-4])', os.path.split(file)[1])]
@@ -206,25 +236,28 @@ if not args.no_groups:
 		# Get the mp3 files
 		files = [f for f in os.listdir(directory) if f.endswith('.mp3')]
 
-		# Create directories and move files to the corresponding directories
-		if not os.path.isdir(f'{directory}/Experiencer'): os.makedirs(f'{directory}/Experiencer')
-		if not os.path.isdir(f'{directory}/Garden-Path'): os.makedirs(f'{directory}/Garden-Path')
-		for mp3 in files:
-			if re.findall(r'^([1-9]\_|[1-2][0-9]\_|3[0-2]\_)', mp3):
-				os.rename(f'{directory}/{mp3}', f'{directory}/Experiencer/{mp3}')
-			elif re.findall(r'^(3[3-9]\_|[4-5][0-9]\_|6[0-4]\_)', mp3):
-				os.rename(f'{directory}/{mp3}', f'{directory}/Garden-Path/{mp3}')
+		if files:
+			# Create directories and move files to the corresponding directories
+			if not os.path.isdir(f'{directory}/Experiencer'): os.makedirs(f'{directory}/Experiencer')
+			if not os.path.isdir(f'{directory}/Garden-Path'): os.makedirs(f'{directory}/Garden-Path')
+			for mp3 in files:
+				if re.findall(r'^([1-9]\_|[1-2][0-9]\_|3[0-2]\_)', mp3):
+					os.rename(f'{directory}/{mp3}', f'{directory}/Experiencer/{mp3}')
+				elif re.findall(r'^(3[3-9]\_|[4-5][0-9]\_|6[0-4]\_)', mp3):
+					os.rename(f'{directory}/{mp3}', f'{directory}/Garden-Path/{mp3}')
 
-		# Save CSV files with the transcription templates for each group
-		exp_group = groups.split(',')[0]
-		gp_group = groups.split(',')[1]
+			# Save CSV files with the transcription templates for each group
+			exp_group = groups.split(',')[0]
+			gp_group = groups.split(',')[1]
 
-		exp_template = pd.read_excel('groups_exp.xlsx', sheet_name = f'Group {exp_group}')
-		exp_template['Subject'] = re.sub('S', '', os.path.split(directory)[-1])
-		exp_template = exp_template.reindex(columns = (['Group', 'Subject'] + list([a for a in exp_template.columns if not a in ['Group', 'Subject']])))
-		exp_template.to_csv(f'{directory}/Experiencer/{os.path.split(directory)[-1]}_exp.csv', index = False)
+			exp_template = pd.read_excel('groups_exp.xlsx', sheet_name = f'Group {exp_group}')
+			exp_template['Subject'] = re.sub('S', '', os.path.split(directory)[-1])
+			exp_template = exp_template.reindex(columns = (['Group', 'Subject'] + list([a for a in exp_template.columns if not a in ['Group', 'Subject']])))
+			exp_template.to_csv(f'{directory}/Experiencer/{os.path.split(directory)[-1]}_exp.csv', index = False)
 
-		gp_template = pd.read_excel('groups_garden-path.xlsx', sheet_name = f'Group {gp_group}')
-		gp_template['Subject'] = re.sub('S', '', os.path.split(directory)[-1])
-		gp_template = gp_template.reindex(columns = (['Group', 'Subject'] + list([a for a in gp_template.columns if not a in ['Group', 'Subject']])))
-		gp_template.to_csv(f'{directory}/Garden-Path/{os.path.split(directory)[-1]}_gp.csv', index = False)
+			gp_template = pd.read_excel('groups_garden-path.xlsx', sheet_name = f'Group {gp_group}')
+			gp_template['Subject'] = re.sub('S', '', os.path.split(directory)[-1])
+			gp_template = gp_template.reindex(columns = (['Group', 'Subject'] + list([a for a in gp_template.columns if not a in ['Group', 'Subject']])))
+			gp_template.to_csv(f'{directory}/Garden-Path/{os.path.split(directory)[-1]}_gp.csv', index = False)
+		else:
+			print(f'No mp3s found in {directory}. Skipping...')

@@ -254,7 +254,7 @@ for transcription_file, sound_dir, stimuli_file in tf_sd_sf:
 	for transcription in transcriptions:
 		for it in transcription:
 			with open(text_dir + '/' + it + '.txt', 'w') as file:
-				file.write(str(transcription[it]))
+				file.write(re.sub(u'\u201d', "'", str(transcription[it])))
 
 	# Read in and sort the audio file names and text file names
 	audio_names = [file for file in os.listdir(sound_dir) if file[-4:] == ".mp3"]
@@ -407,8 +407,6 @@ for transcription_file, sound_dir, stimuli_file in tf_sd_sf:
 
 		# Add the words to the end of the durations
 		row = dur_row + word_row
-
-		breakpoint()
 
 		# Add the row to the data frame
 		row = pandas.Series(row, index = durations.columns)
