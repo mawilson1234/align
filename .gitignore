@@ -1,5 +1,6 @@
 *.txt
 auto_transcribe.py
+get_results.py
 SUBTLEX\ sentences.xlsx
 *.r
 Audio/
