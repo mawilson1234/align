@@ -4,6 +4,6 @@ get_results.py
 SUBTLEX\ sentences.xlsx
 *.r
 Audio/
-Audio-mk2/
+Audio-*/
 Plots/
 Models/
