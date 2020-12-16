@@ -73,6 +73,8 @@ if zipfiles:
 		for subject_id in subject_ids:
 			subject_numbers.append(results.loc[results.value == subject_id].number.tolist()[0])
 
+		args.directories = []
+
 		for file, subject in tuple(zip(zipfiles, subject_numbers)):
 			with zipfile.ZipFile(file, 'r') as f:
 				print(f'\rExtracting {file}...', end = '', flush = True)
@@ -86,6 +88,8 @@ if zipfiles:
 		print('Unable to download latest results file. Groups will not be automatically determined if there are subjects not in the local version of the results file.')
 
 		# Extract each file to its own directory
+		args.directories = []
+
 		for file in zipfiles:
 			with zipfile.ZipFile(file, 'r') as f:
 				print(f'\rExtracting {file}...', end = '', flush = True)
