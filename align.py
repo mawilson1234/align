@@ -343,59 +343,63 @@ for transcription_file, sound_dir, stimuli_file in tf_sd_sf:
 			# Remove entries without alignments
 			words = [word for word in words if 'alignedWord' in word]
 
-			# Get the starting and end position of the grid by the beginning of first word and end of last word and write them to the TextGrid
-			start = words[0]['startOffset']
-			end = words[-1]['end']
-			f.write('\n' + str(start))
-			f.write('\n' + str(end))
+			# If gentle couldn't find any words, skip this one
+			if not words:
+				input('Warning: gentle found no words in "' + grid + '". No durations will be saved for this item, and the textgrid file will be empty. Press any key to continue.')
+			else:
+				# Get the starting and end position of the grid by the beginning of first word and end of last word and write them to the TextGrid
+				start = words[0]['startOffset']
+				end = words[-1]['end']
+				f.write('\n' + str(start))
+				f.write('\n' + str(end))
 
-			# Required TextGrid formatting
-			f.write('\n<exists>\n1\n"IntervalTier"\n"word"\n' + str(start) + '\n' + str(end))
-			f.write('\n' + str(len(words) + 1) + '\n')
+				# Required TextGrid formatting
+				f.write('\n<exists>\n1\n"IntervalTier"\n"word"\n' + str(start) + '\n' + str(end))
+				f.write('\n' + str(len(words) + 1) + '\n')
 
-			# For each word with alignment info
-			for i, alignment in enumerate(words):
+				# For each word with alignment info
+				for i, alignment in enumerate(words):
 
-				# Get the word and its starting and ending position
-				word = alignment['alignedWord']
-				onset = alignment['start']
-				offset = alignment['end']
+					# Get the word and its starting and ending position
+					word = alignment['alignedWord']
+					onset = alignment['start']
+					offset = alignment['end']
 
-				# If it's the first word, write silence before its onset
-				if alignment == words[0]:
-					f.write('0\n' + str(onset) + '\n"{SL}"')
+					# If it's the first word, write silence before its onset
+					if alignment == words[0]:
+						f.write('0\n' + str(onset) + '\n"{SL}"')
 
-					# The start point of first word is speech onset latency
-					diff = round(float(onset), 4) * 1000
+						# The start point of first word is speech onset latency
+						diff = round(float(onset), 4) * 1000
 
-					# Add it to the row
+						# Add it to the row
+						dur_row.append(diff)
+
+						# Add a pre-speech marker to the words (Speech Onset Latency)
+						word_row.append('SOL')
+
+					# Get the duration of the word
+					# Starting point of the word
+					pre = round(float(onset), 4) * 1000
+
+					# If it's the last word, then the ending time is the end of that word
+					if alignment == words[-1]:
+						post = round(float(offset), 4) * 1000
+					# Otherwise, the ending time is the starting point of the next word
+					else:
+						post = round(float(words[i + 1]['start']), 4) * 1000
+					
+					# Duration is the difference between ending and starting time
+					diff = post - pre
 					dur_row.append(diff)
 
-					# Add a pre-speech marker to the words (Speech Onset Latency)
-					word_row.append('SOL')
+					# Add the word with that duration to the word row
+					word_row.append(word)
 
-				# Get the duration of the word
-				# Starting point of the word
-				pre = round(float(onset), 4) * 1000
-
-				# If it's the last word, then the ending time is the end of that word
-				if alignment == words[-1]:
-					post = round(float(offset), 4) * 1000
-				# Otherwise, the ending time is the starting point of the next word
-				else:
-					post = round(float(words[i + 1]['start']), 4) * 1000
-				
-				# Duration is the difference between ending and starting time
-				diff = post - pre
-				dur_row.append(diff)
-
-				# Add the word with that duration to the word row
-				word_row.append(word)
-
-				# Write its onset, offset, and text to the TextGrid
-				f.write('\n' + str(onset))
-				f.write('\n' + str(offset))
-				f.write('\n"' + word + '"')
+					# Write its onset, offset, and text to the TextGrid
+					f.write('\n' + str(onset))
+					f.write('\n' + str(offset))
+					f.write('\n"' + word + '"')
 
 		# Fill out the durations row with zeros (have to add one because of the item number column)
 		while len(dur_row) < args.max_words + 1:
