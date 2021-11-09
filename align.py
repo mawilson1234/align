@@ -408,6 +408,7 @@ for transcription_file, sound_dir, stimuli_file in tf_sd_sf:
 		# truncate if too long
 		if len(dur_row) > args.max_words + 1:
 			dur_row = dur_row[:args.max_words + 1]
+			print('Warning: the current sentence is longer than the allowable maximum words. Duration data will be truncated. It is recommended that you rerun from scratch and set --max-words to a larger number.')
 
 		# Fill out the words row with dashes (don't add one becaus there's no item number column)
 		while len(word_row) < args.max_words:
