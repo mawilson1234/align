@@ -174,7 +174,7 @@ class GentleListener():
 					'privileges. Make sure to manually exit Docker Desktop via the tray menu.'
 				)
 		else:
-			subprocess.call("osascript -e 'quit app \"gentle\"'", shell = True)
+			subprocess.call("osascript -e 'quit app \"gentle\"'", shell=True)
 
 class TempDir():
 	'''Creates and closes a tmp dir.'''
