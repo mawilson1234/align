@@ -8,6 +8,8 @@ This script helps with getting duration information for transcribed speech.
 
 `requests`
 
+`tqdm`
+
 gentle (standalone version installed in Applications folder on Mac; installed via Docker on Windows)
 
 Docker Desktop (Windows only)
